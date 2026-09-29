@@ -1,0 +1,16 @@
+{
+  "name": "listening-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "孩子中文听力打卡网站（IB 中文 B HL）——家长上传音频/PDF，孩子按日期解锁、听、写概要、打卡",
+  "scripts": {
+    "dev": "wrangler pages dev public",
+    "deploy": "wrangler pages deploy public"
+  },
+  "dependencies": {
+    "unpdf": "latest"
+  },
+  "devDependencies": {
+    "wrangler": "^3.78.0"
+  }
+}

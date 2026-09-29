@@ -1,0 +1,22 @@
+name = "listening-app"
+compatibility_date = "2024-09-01"
+pages_build_output_dir = "public"
+
+# ============ R2 存储（音频 + PDF） ============
+# 创建：wrangler r2 bucket create listening-audio
+[[r2_buckets]]
+binding = "R2"
+bucket_name = "listening-audio"
+
+# ============ D1 数据库（打卡数据） ============
+# 创建：wrangler d1 create listening-db
+# 把返回的 database_id 填到下面
+[[d1_databases]]
+binding = "DB"
+database_name = "listening-db"
+database_id = "dd2b5e55-a629-4bc8-ae34-83107185432a"
+
+# ============ 环境变量说明（不要写在这里） ============
+# PARENT_PASSWORD —— 家长密码，用 secret 设置：
+#   wrangler pages secret put PARENT_PASSWORD
+# 音频/PDF 通过 /files 代理从 R2 读取，无需开启 R2 公开访问，也无需其他环境变量。

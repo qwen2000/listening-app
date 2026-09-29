@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>每日听力打卡</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <div>
+      <h1>🎧 每日听力</h1>
+      <p class="today" id="todayLabel"></p>
+    </div>
+    <a href="admin.html" class="admin-link">家长入口</a>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <button class="btn sidebar-btn" id="todayBtn">📍 今天</button>
+      <button class="btn secondary sidebar-btn" id="allBtn">全部</button>
+      <nav id="weekNav" class="week-nav"></nav>
+    </aside>
+    <main id="list"></main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

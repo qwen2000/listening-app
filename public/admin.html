@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>家长管理</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <div>
+      <h1>👨‍👩‍👧 家长管理</h1>
+      <p class="today" id="todayLabel"></p>
+    </div>
+    <a href="index.html" class="admin-link">返回主页</a>
+  </header>
+
+  <main>
+    <!-- 密码锁屏 -->
+    <div class="lock-screen" id="lock">
+      <div class="card">
+        <h2>家长密码</h2>
+        <div class="field">
+          <input type="password" id="password" placeholder="请输入密码">
+        </div>
+        <button class="btn" id="unlockBtn">解锁</button>
+        <p class="msg err" id="lockMsg"></p>
+      </div>
+    </div>
+
+    <!-- 管理面板 -->
+    <div id="panel" style="display:none;">
+      <div class="card">
+        <h2 class="section-title" style="margin-top:0;">上传音频</h2>
+        <div class="field">
+          <label>日期（对应哪一天，可填未来日期提前上传）</label>
+          <input type="date" id="audioDate">
+        </div>
+        <div class="field">
+          <label>标题（可选）</label>
+          <input type="text" id="audioTitle" placeholder="如：真题 2019 May 听力 1">
+        </div>
+        <div class="field">
+          <label>音频文件</label>
+          <input type="file" id="audioFile" accept="audio/*">
+        </div>
+        <button class="btn" id="uploadAudioBtn">上传音频</button>
+        <p class="msg" id="audioMsg"></p>
+      </div>
+
+      <div class="card">
+        <h2 class="section-title" style="margin-top:0;">上传文本 PDF</h2>
+        <div class="field">
+          <label>对应日期</label>
+          <input type="date" id="pdfDate">
+        </div>
+        <div class="field">
+          <label>文本文件（PDF 或长图 JPG/PNG）</label>
+          <input type="file" id="pdfFile" accept="application/pdf,image/*">
+        </div>
+        <button class="btn" id="uploadPdfBtn">上传 PDF</button>
+        <p class="msg" id="pdfMsg"></p>
+      </div>
+
+      <div class="card">
+        <h2 class="section-title" style="margin-top:0;">检查打卡</h2>
+        <div id="reviewList"></div>
+      </div>
+
+      <div class="card">
+        <h2 class="section-title" style="margin-top:0;">词句提取与审核</h2>
+        <div class="field">
+          <label>日期（对应哪一天的听力，需已上传 PDF）</label>
+          <input type="date" id="vocabDate">
+        </div>
+        <div class="field">
+          <label>提取词数量</label>
+          <input type="number" id="vocabCount" min="1" max="100" value="20" style="width:120px;">
+        </div>
+        <button class="btn" id="extractBtn">从 PDF 提取词句</button>
+        <p class="muted" style="margin:8px 0 4px;">—— 或用本地 OCR 识别（图片型 PDF / 长图）——</p>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="file" id="localOcrFile" accept="application/pdf,image/*" style="flex:1;font-size:13px;">
+          <button class="btn secondary" id="localOcrBtn" style="flex-shrink:0;">本地识别</button>
+        </div>
+        <div id="ocrProgress" style="display:none;margin:6px 0;">
+          <div style="background:#e2e5ea;border-radius:4px;height:8px;overflow:hidden;">
+            <div id="ocrProgressBar" style="background:#2b6cb0;height:100%;width:0%;transition:width 0.3s;"></div>
+          </div>
+        </div>
+        <p class="msg" id="ocrMsg"></p>
+        <p class="muted" style="margin:8px 0 4px;">—— 或粘贴 OCR 识别的文字 ——</p>
+        <textarea id="pastedText" style="width:100%;min-height:80px;border:1px solid var(--border);border-radius:8px;padding:8px;font-size:14px;font-family:inherit;" placeholder="把本地 OCR 识别出的文字粘贴到这里"></textarea>
+        <button class="btn secondary" id="extractFromTextBtn" style="margin-top:6px;">从粘贴文字提取词句</button>
+        <p class="msg" id="extractMsg"></p>
+        <div id="vocabToolbar" style="display:none;margin:8px 0;align-items:center;gap:10px;">
+          <label style="font-size:13px;display:flex;align-items:center;gap:4px;cursor:pointer;">
+            <input type="checkbox" id="selectAllVocab"> 全选
+          </label>
+          <button class="btn secondary" id="approveSelectedBtn">保留选中</button>
+          <button class="btn secondary" id="deleteSelectedBtn" style="background:#c53030;color:#fff;">删除选中</button>
+        </div>
+        <div id="vocabList"></div>
+      </div>
+    </div>
+  </main>
+
+  <script src="admin.js"></script>
+</body>
+</html>
