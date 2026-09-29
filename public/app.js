@@ -59,7 +59,9 @@ async function load() {
 
 function renderNav() {
   const weeks = new Map();
+  const today = todayStr();
   for (const e of allEpisodes) {
+    if (e.date > today) continue; // 未来条目不统计
     const key = getWeekKey(e.date);
     if (!weeks.has(key)) weeks.set(key, []);
     weeks.get(key).push(e);
@@ -95,9 +97,9 @@ function renderList() {
   const today = todayStr();
   todayLabelEl.textContent = `今天是 ${formatDate(today)}`;
 
-  let eps = allEpisodes;
+  let eps = allEpisodes.filter((e) => e.date <= today); // 未来条目不显示
   if (currentWeek) {
-    eps = allEpisodes.filter((e) => getWeekKey(e.date) === currentWeek);
+    eps = eps.filter((e) => getWeekKey(e.date) === currentWeek);
   }
 
   if (!eps.length) {

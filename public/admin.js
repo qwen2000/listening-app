@@ -53,7 +53,7 @@ async function unlock() {
 }
 
 async function uploadAudio() {
-  const date = document.getElementById('audioDate').value;
+  const date = document.getElementById('date').value;
   const title = document.getElementById('audioTitle').value.trim();
   const file = document.getElementById('audioFile').files[0];
   if (!date || !file) {
@@ -92,7 +92,7 @@ async function uploadAudio() {
 }
 
 async function uploadPdf() {
-  const date = document.getElementById('pdfDate').value;
+  const date = document.getElementById('date').value;
   const file = document.getElementById('pdfFile').files[0];
   if (!date || !file) {
     showMsg('pdfMsg', '请选择日期和 PDF 文件', true);
@@ -195,12 +195,10 @@ document.getElementById('password').addEventListener('keydown', (e) => {
 });
 
 // 默认日期填今天
-document.getElementById('audioDate').value = todayStr();
-document.getElementById('pdfDate').value = todayStr();
+document.getElementById('date').value = todayStr();
 document.getElementById('todayLabel').textContent = `今天是 ${formatDate(todayStr())}`;
 
 // ===== 词句提取与审核 =====
-document.getElementById('vocabDate').value = todayStr();
 document.getElementById('extractBtn').addEventListener('click', extractVocab);
 document.getElementById('extractFromTextBtn').addEventListener('click', extractFromText);
 document.getElementById('localOcrBtn').addEventListener('click', localOcr);
@@ -215,7 +213,7 @@ if (savedCount) {
 }
 
 async function extractVocab() {
-  const date = document.getElementById('vocabDate').value;
+  const date = document.getElementById('date').value;
   if (!date) {
     showMsg('extractMsg', '请选择日期', true);
     return;
@@ -250,7 +248,7 @@ async function extractVocab() {
 }
 
 async function extractFromText() {
-  const date = document.getElementById('vocabDate').value;
+  const date = document.getElementById('date').value;
   const text = document.getElementById('pastedText').value.trim();
   if (!date) {
     showMsg('extractMsg', '请选择日期', true);
@@ -414,7 +412,7 @@ async function batchSelected(action) {
     alert('请先勾选词语');
     return;
   }
-  const date = document.getElementById('vocabDate').value;
+  const date = document.getElementById('date').value;
   for (const id of ids) {
     const res = await fetch(`/api/episodes/${date}/vocab/${id}`, {
       method: 'POST',
