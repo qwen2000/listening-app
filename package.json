@@ -8,8 +8,7 @@
     "deploy": "wrangler pages deploy public"
   },
   "dependencies": {
-    "@napi-rs/canvas": "^1.0.9",
-    "pdfjs-dist": "^4.10.38"
+    "unpdf": "^1.8.1"
   },
   "devDependencies": {
     "wrangler": "^3.78.0"

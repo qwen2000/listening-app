@@ -7,7 +7,7 @@
 //   - vocab（重点词句，家长审核后孩子看）
 
 import { VOCAB_IDIOMS, VOCAB_NOUNS, VOCAB_VERBS, VOCAB_ADJECTIVES } from '../../../_vocab.js';
-import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
+import { extractText } from 'unpdf';
 
 function checkPassword(request, env) {
   const pw = request.headers.get('X-Parent-Password') || '';
@@ -176,19 +176,8 @@ export async function onRequest(context) {
     const buf = await obj.arrayBuffer();
 
     try {
-      const pdf = await getDocument({
-        data: new Uint8Array(buf),
-        useWorkerFetch: false,
-        isEvalSupported: false,
-        disableFontFace: true,
-      }).promise;
-      let extracted = '';
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const content = await page.getTextContent();
-        extracted += content.items.map((item) => (item && item.str) || '').join(' ') + '\n';
-      }
-      text = extracted;
+      const result = await extractText(new Uint8Array(buf));
+      text = Array.isArray(result) ? result.map((t) => (t && t.str) || '').join('') : (result || '');
     } catch (e) {
       const msg = e && e.message ? e.message : String(e);
       return Response.json(
