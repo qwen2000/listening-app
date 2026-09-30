@@ -7,7 +7,6 @@
 //   - vocab（重点词句，家长审核后孩子看）
 
 import { VOCAB_IDIOMS, VOCAB_NOUNS, VOCAB_VERBS, VOCAB_ADJECTIVES } from '../../../_vocab.js';
-import { extractText } from 'unpdf';
 
 function checkPassword(request, env) {
   const pw = request.headers.get('X-Parent-Password') || '';
@@ -161,37 +160,13 @@ export async function onRequest(context) {
   const pastedText = (body.text || '').toString().trim();
   const count = parseInt(body.count, 10) > 0 ? parseInt(body.count, 10) : 20;
 
-  let text = '';
-  if (pastedText) {
-    text = pastedText;
-  } else {
-    const ep = await env.DB.prepare('SELECT pdf_key FROM episodes WHERE date = ?').bind(date).first();
-    if (!ep || !ep.pdf_key) {
-      return Response.json({ error: '该日期还没有 PDF，请先上传' }, { status: 404 });
-    }
-    const obj = await env.R2.get(ep.pdf_key);
-    if (!obj) {
-      return Response.json({ error: 'PDF 文件不存在' }, { status: 404 });
-    }
-    const buf = await obj.arrayBuffer();
-
-    try {
-      const result = await extractText(new Uint8Array(buf));
-      text = Array.isArray(result) ? result.map((t) => (t && t.str) || '').join('') : (result || '');
-    } catch (e) {
-      const msg = e && e.message ? e.message : String(e);
-      return Response.json(
-        { error: 'PDF 解析失败（若是图片型 PDF，请用本地 OCR 后粘贴文字）：' + msg },
-        { status: 500 }
-      );
-    }
-    if (!text || text.trim().length < 10) {
-      return Response.json(
-        { error: 'PDF 里没提取到文字（图片型 PDF 请用本地 OCR 后粘贴文字）' },
-        { status: 422 }
-      );
-    }
+  if (!pastedText) {
+    return Response.json(
+      { error: '请先用「本地识别」提取文字，再点「从粘贴文字提取词句」' },
+      { status: 400 }
+    );
   }
+  const text = pastedText;
 
   // LLM 为主，词库兜底
   let terms = [];

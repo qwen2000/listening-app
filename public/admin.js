@@ -210,7 +210,6 @@ document.getElementById('todayLabel').textContent = `今天是 ${formatDate(toda
 document.getElementById('addUserBtn').addEventListener('click', addUser);
 
 // ===== 词句提取与审核 =====
-document.getElementById('extractBtn').addEventListener('click', extractVocab);
 document.getElementById('extractFromTextBtn').addEventListener('click', extractFromText);
 document.getElementById('localOcrBtn').addEventListener('click', localOcr);
 document.getElementById('selectAllVocab').addEventListener('change', selectAllVocab);
@@ -281,41 +280,6 @@ async function loadTagSuggestions() {
 // 初始化：加载用户和标签
 loadUsers();
 loadTagSuggestions();
-
-async function extractVocab() {
-  const date = document.getElementById('date').value;
-  if (!date) {
-    showMsg('extractMsg', '请选择日期', true);
-    return;
-  }
-  const btn = document.getElementById('extractBtn');
-  btn.disabled = true;
-  btn.textContent = '提取中…（可能几秒）';
-  showMsg('extractMsg', '正在解析 PDF 并提取词句…', false);
-  try {
-    const count = getVocabCount();
-    localStorage.setItem('vocabCount', String(count));
-    const res = await fetch(`/api/episodes/${date}/extract`, {
-      method: 'POST',
-      headers: authHeaders({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify({ count }),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (res.ok) {
-      showMsg('extractMsg', `提取到 ${data.count} 个词语，请在下面审核`, false);
-      loadVocabList(date);
-    } else if (res.status === 401) {
-      showMsg('extractMsg', '密码错误', true);
-    } else {
-      const text = data && data.error ? data.error : '提取失败';
-      showMsg('extractMsg', text, true);
-    }
-  } catch {
-    showMsg('extractMsg', '网络错误', true);
-  }
-  btn.disabled = false;
-  btn.textContent = '从 PDF 提取词句';
-}
 
 async function extractFromText() {
   const date = document.getElementById('date').value;

@@ -91,8 +91,7 @@
           <label>提取词数量</label>
           <input type="number" id="vocabCount" min="1" max="100" value="20" style="width:120px;">
         </div>
-        <button class="btn" id="extractBtn">从 PDF 提取词句</button>
-        <p class="muted" style="margin:8px 0 4px;">—— 或用本地 OCR 识别（图片型 PDF / 长图）——</p>
+        <p class="muted" style="margin:8px 0 4px;">—— 用本地识别提取文字（文字型 PDF 直接读，图片型 OCR）——</p>
         <div style="display:flex;gap:8px;align-items:center;">
           <input type="file" id="localOcrFile" accept="application/pdf,image/*" style="flex:1;font-size:13px;">
           <button class="btn secondary" id="localOcrBtn" style="flex-shrink:0;">本地识别</button>
