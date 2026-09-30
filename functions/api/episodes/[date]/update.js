@@ -6,13 +6,14 @@ function checkPassword(request, env) {
   return pw === env.PARENT_PASSWORD;
 }
 
+const TAG_PALETTE = ['#2b6cb0', '#c53030', '#2f855a', '#b7791f', '#6b46c1', '#3182ce', '#d53f8c', '#dd6b20', '#38a169', '#805ad5', '#e53e3e', '#00a3c4'];
+
 function hashColor(name) {
   let hash = 0;
   for (let i = 0; i < name.length; i++) {
     hash = name.charCodeAt(i) + ((hash << 5) - hash);
   }
-  const hue = Math.abs(hash) % 360;
-  return `hsl(${hue}, 65%, 45%)`;
+  return TAG_PALETTE[Math.abs(hash) % TAG_PALETTE.length];
 }
 
 export async function onRequest(context) {

@@ -335,9 +335,44 @@ async function loadTagSuggestions() {
   });
 }
 
+// 标签管理（改颜色）
+async function loadTagManage() {
+  const res = await fetch('/api/tags');
+  const tags = await res.json();
+  const el = document.getElementById('tagManageList');
+  if (!tags.length) {
+    el.innerHTML = '<p class="muted">还没有标签</p>';
+    return;
+  }
+  el.innerHTML = tags.map((t) => `
+    <div class="user-row">
+      <span class="tag-chip" style="background:${escapeHtml(t.color)};color:#fff;">${escapeHtml(t.name)}</span>
+      <input type="color" value="${escapeHtml(t.color)}" data-color-id="${t.id}" style="width:36px;height:30px;border:none;padding:0;cursor:pointer;border-radius:4px;">
+    </div>
+  `).join('');
+  el.querySelectorAll('[data-color-id]').forEach((input) => {
+    input.addEventListener('change', async () => {
+      const color = input.value;
+      const id = input.dataset.colorId;
+      const res = await fetch(`/api/tags/${id}`, {
+        method: 'POST',
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ color }),
+      });
+      if (res.ok) {
+        loadTagManage();
+        loadTagSuggestions();
+      } else if (res.status === 401) {
+        alert('密码错误');
+      }
+    });
+  });
+}
+
 // 初始化：加载用户和标签
 loadUsers();
 loadTagSuggestions();
+loadTagManage();
 
 async function extractFromText() {
   const date = document.getElementById('date').value;
