@@ -175,9 +175,20 @@ export async function onRequest(context) {
     const buf = await obj.arrayBuffer();
 
     try {
-      const { extractText } = await import('unpdf');
-      const result = await extractText(new Uint8Array(buf));
-      text = Array.isArray(result) ? result.map((t) => (t && t.str) || '').join('') : (result || '');
+      const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
+      const pdf = await pdfjs.getDocument({
+        data: new Uint8Array(buf),
+        useWorkerFetch: false,
+        isEvalSupported: false,
+        disableFontFace: true,
+      }).promise;
+      let extracted = '';
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        extracted += content.items.map((item) => (item && item.str) || '').join(' ') + '\n';
+      }
+      text = extracted;
     } catch (e) {
       const msg = e && e.message ? e.message : String(e);
       return Response.json(

@@ -8,7 +8,7 @@
     "deploy": "wrangler pages deploy public"
   },
   "dependencies": {
-    "unpdf": "latest"
+    "pdfjs-dist": "^4.10.38"
   },
   "devDependencies": {
     "wrangler": "^3.78.0"
