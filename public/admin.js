@@ -168,12 +168,17 @@ async function loadList() {
         </div>
       `;
     }).join('');
+    const tagsHtml = (e.tags || []).map((t) => `<span class="tag-chip" style="background:${escapeHtml(t.color)};color:#fff;">${escapeHtml(t.name)}</span>`).join('');
+    const tagsStr = (e.tags || []).map((t) => t.name).join(', ');
     return `
-      <div class="review-row">
+      <div class="review-row" data-edit-row="${e.date}" data-title="${escapeHtml(e.title || '')}" data-tags="${escapeHtml(tagsStr)}">
         <div class="review-info">
           <div class="review-date">${formatDate(e.date)}${e.audioUrl ? '' : ' · ⚠️ 无音频'}</div>
-          <div class="review-title">${escapeHtml(e.title || '（无标题）')}</div>
+          <div class="review-title"><span>${escapeHtml(e.title || '（无标题）')}</span> ${tagsHtml}</div>
           ${userRows || '<div class="review-summary">还没有用户</div>'}
+        </div>
+        <div style="flex-shrink:0;">
+          <button class="btn secondary" data-edit-audio="${e.date}">编辑</button>
         </div>
       </div>
     `;
@@ -182,6 +187,49 @@ async function loadList() {
   document.querySelectorAll('[data-review]').forEach((btn) => {
     btn.addEventListener('click', () => markReview(btn.dataset.review, btn.dataset.user, btn));
   });
+  document.querySelectorAll('[data-edit-audio]').forEach((btn) => {
+    btn.addEventListener('click', () => enterEditAudioMode(btn.dataset.editAudio));
+  });
+}
+
+function enterEditAudioMode(date) {
+  const row = document.querySelector(`[data-edit-row="${date}"]`);
+  const title = row.dataset.title;
+  const tags = row.dataset.tags;
+
+  row.innerHTML = `
+    <div class="review-info" style="flex:1;">
+      <div class="review-date">${formatDate(date)}</div>
+      <input type="text" class="edit-word-input" value="${escapeHtml(title)}" placeholder="标题">
+      <input type="text" class="edit-word-input" style="margin-top:6px;width:100%;" value="${escapeHtml(tags)}" placeholder="标签（逗号分隔）">
+    </div>
+    <div style="display:flex;gap:6px;flex-shrink:0;">
+      <button class="btn" data-save-audio="${date}">保存</button>
+      <button class="btn secondary" data-cancel-audio="${date}">取消</button>
+    </div>
+  `;
+
+  row.querySelector('[data-save-audio]').addEventListener('click', () => saveAudioEdit(date));
+  row.querySelector('[data-cancel-audio]').addEventListener('click', () => loadList());
+}
+
+async function saveAudioEdit(date) {
+  const row = document.querySelector(`[data-edit-row="${date}"]`);
+  const inputs = row.querySelectorAll('input');
+  const title = inputs[0].value.trim();
+  const tags = inputs[1].value.trim();
+  const res = await fetch(`/api/episodes/${date}/update`, {
+    method: 'POST',
+    headers: authHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ title, tags }),
+  });
+  if (res.ok) {
+    loadList();
+  } else if (res.status === 401) {
+    alert('密码错误');
+  } else {
+    alert('保存失败');
+  }
 }
 
 async function markReview(date, userId, btn) {
