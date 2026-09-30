@@ -16,6 +16,7 @@
       <h1>🎧 每日听力</h1>
       <p class="today" id="todayLabel"></p>
     </div>
+    <select id="userSelect" style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px;"></select>
     <a href="admin.html" class="admin-link">家长入口</a>
   </header>
 
@@ -23,6 +24,7 @@
     <aside class="sidebar">
       <button class="btn sidebar-btn" id="todayBtn">📍 今天</button>
       <button class="btn secondary sidebar-btn" id="allBtn">全部</button>
+      <div id="tagFilter" style="margin:8px 0;display:flex;flex-wrap:wrap;gap:6px;"></div>
       <nav id="weekNav" class="week-nav"></nav>
     </aside>
     <main id="list"></main>

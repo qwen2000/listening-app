@@ -65,6 +65,7 @@ async function uploadAudio() {
   form.append('date', date);
   form.append('title', title);
   form.append('file', file);
+  form.append('tags', document.getElementById('audioTags').value.trim());
 
   const btn = document.getElementById('uploadAudioBtn');
   btn.disabled = true;
@@ -128,7 +129,7 @@ async function uploadPdf() {
 }
 
 async function loadList() {
-  const res = await fetch('/api/episodes');
+  const res = await fetch('/api/review');
   const eps = await res.json();
   const el = document.getElementById('reviewList');
 
@@ -138,52 +139,59 @@ async function loadList() {
   }
 
   el.innerHTML = eps.map((e) => {
-    const listened = !!e.listenedAt;
-    const summarized = !!e.summarizedAt;
-    const reviewed = !!e.parentReviewedAt;
-    const done = listened && summarized;
-    let status;
-    if (!done) {
-      status = '<span class="muted">等待完成</span>';
-    } else if (reviewed) {
-      status = '<span class="badge reviewed-badge">已签字</span>';
-    } else {
-      status = `<button class="btn secondary" data-review="${e.date}">签字认证</button>`;
-    }
+    const userRows = (e.users || []).map((u) => {
+      const listened = u.listened ? '✅听' : '⬜听';
+      const summarized = u.summarized ? '✅概述' : '⬜概述';
+      let status;
+      if (u.reviewed) {
+        status = '<span class="badge reviewed-badge">已签字</span>';
+      } else if (u.listened && u.summarized) {
+        status = `<button class="btn secondary" data-review="${e.date}" data-user="${u.id}">签字</button>`;
+      } else {
+        status = '<span class="muted">未完成</span>';
+      }
+      return `
+        <div class="user-row">
+          <span class="user-name">${escapeHtml(u.name)}</span>
+          <span class="user-status">${listened} ${summarized}</span>
+          ${status}
+        </div>
+      `;
+    }).join('');
     return `
       <div class="review-row">
         <div class="review-info">
           <div class="review-date">${formatDate(e.date)}${e.audioUrl ? '' : ' · ⚠️ 无音频'}</div>
           <div class="review-title">${escapeHtml(e.title || '（无标题）')}</div>
-          <div class="review-summary">孩子进度：${listened ? '✅已听' : '未听'} · ${summarized ? '✅已概述' : '未概述'}</div>
+          ${userRows || '<div class="review-summary">还没有用户</div>'}
         </div>
-        <div>${status}</div>
       </div>
     `;
   }).join('');
 
   document.querySelectorAll('[data-review]').forEach((btn) => {
-    btn.addEventListener('click', () => markReview(btn.dataset.review, btn));
+    btn.addEventListener('click', () => markReview(btn.dataset.review, btn.dataset.user, btn));
   });
 }
 
-async function markReview(date, btn) {
+async function markReview(date, userId, btn) {
   btn.disabled = true;
   btn.textContent = '处理中…';
   const res = await fetch(`/api/episodes/${date}/review`, {
     method: 'POST',
-    headers: authHeaders(),
+    headers: authHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ user_id: userId }),
   });
   if (res.ok) {
     loadList();
   } else if (res.status === 401) {
     alert('密码错误，请重新解锁');
     btn.disabled = false;
-    btn.textContent = '标记检查';
+    btn.textContent = '签字';
   } else {
     alert('操作失败');
     btn.disabled = false;
-    btn.textContent = '标记检查';
+    btn.textContent = '签字';
   }
 }
 
@@ -198,6 +206,9 @@ document.getElementById('password').addEventListener('keydown', (e) => {
 document.getElementById('date').value = todayStr();
 document.getElementById('todayLabel').textContent = `今天是 ${formatDate(todayStr())}`;
 
+// ===== 用户管理 =====
+document.getElementById('addUserBtn').addEventListener('click', addUser);
+
 // ===== 词句提取与审核 =====
 document.getElementById('extractBtn').addEventListener('click', extractVocab);
 document.getElementById('extractFromTextBtn').addEventListener('click', extractFromText);
@@ -211,6 +222,65 @@ const savedCount = localStorage.getItem('vocabCount');
 if (savedCount) {
   document.getElementById('vocabCount').value = savedCount;
 }
+
+// ===== 用户管理 =====
+async function loadUsers() {
+  const res = await fetch('/api/users');
+  const users = await res.json();
+  const el = document.getElementById('userList');
+  if (!users.length) {
+    el.innerHTML = '<p class="muted">还没有用户，先添加</p>';
+    return;
+  }
+  el.innerHTML = users.map((u) => `<span class="tag-chip" style="background:#eef2f7;color:#333;">${escapeHtml(u.name)}</span>`).join('');
+}
+
+async function addUser() {
+  const name = document.getElementById('newUserName').value.trim();
+  if (!name) {
+    alert('请输入用户名字');
+    return;
+  }
+  const res = await fetch('/api/users', {
+    method: 'POST',
+    headers: authHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ name }),
+  });
+  if (res.ok) {
+    document.getElementById('newUserName').value = '';
+    loadUsers();
+  } else if (res.status === 401) {
+    alert('密码错误');
+  } else {
+    alert('添加失败');
+  }
+}
+
+// ===== 标签建议 =====
+async function loadTagSuggestions() {
+  const res = await fetch('/api/tags');
+  const tags = await res.json();
+  const el = document.getElementById('tagSuggestions');
+  if (!tags.length) {
+    el.innerHTML = '';
+    return;
+  }
+  el.innerHTML = tags.map((t) => `<span class="tag-chip" style="background:${escapeHtml(t.color)};color:#fff;cursor:pointer;" data-tag="${escapeHtml(t.name)}">${escapeHtml(t.name)}</span>`).join('');
+  el.querySelectorAll('[data-tag]').forEach((chip) => {
+    chip.addEventListener('click', () => {
+      const input = document.getElementById('audioTags');
+      const existing = input.value.split(/[,，]/).map((s) => s.trim()).filter(Boolean);
+      if (!existing.includes(chip.dataset.tag)) {
+        existing.push(chip.dataset.tag);
+        input.value = existing.join(', ');
+      }
+    });
+  });
+}
+
+// 初始化：加载用户和标签
+loadUsers();
+loadTagSuggestions();
 
 async function extractVocab() {
   const date = document.getElementById('date').value;

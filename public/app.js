@@ -3,9 +3,13 @@ const todayLabelEl = document.getElementById('todayLabel');
 const weekNavEl = document.getElementById('weekNav');
 const todayBtn = document.getElementById('todayBtn');
 const allBtn = document.getElementById('allBtn');
+const userSelect = document.getElementById('userSelect');
+const tagFilterEl = document.getElementById('tagFilter');
 
 let allEpisodes = [];
 let currentWeek = null; // null = 全部
+let currentUserId = null;
+let currentTag = null;
 
 function todayStr() {
   const d = new Date();
@@ -47,13 +51,15 @@ function escapeHtml(s) {
 }
 
 async function load() {
-  const res = await fetch('/api/episodes');
+  const url = currentUserId ? `/api/episodes?user_id=${currentUserId}` : '/api/episodes';
+  const res = await fetch(url);
   if (!res.ok) {
     listEl.innerHTML = '<p class="empty">加载失败，请稍后再试</p>';
     return;
   }
   allEpisodes = await res.json();
   renderNav();
+  renderTagFilter();
   renderList();
 }
 
@@ -98,6 +104,9 @@ function renderList() {
   todayLabelEl.textContent = `今天是 ${formatDate(today)}`;
 
   let eps = allEpisodes.filter((e) => e.date <= today); // 未来条目不显示
+  if (currentTag) {
+    eps = eps.filter((e) => (e.tags || []).some((t) => t.name === currentTag));
+  }
   if (currentWeek) {
     eps = eps.filter((e) => getWeekKey(e.date) === currentWeek);
   }
@@ -117,6 +126,7 @@ function renderList() {
   html += eps.map((e) => cardHtml(e, today)).join('');
   listEl.innerHTML = html;
   bindEvents();
+  loadTerms();
   loadVocab();
 }
 
@@ -147,6 +157,7 @@ function cardHtml(e, today) {
     body = `<p class="muted">🔒 未解锁，到 ${formatDate(e.date)} 才能听</p>`;
   } else if (e.audioUrl) {
     body = `
+      <div class="terms-area" data-terms="${e.date}"></div>
       <audio controls preload="none" src="${escapeHtml(e.audioUrl)}"></audio>
       <div class="checkin-row">
         ${listened
@@ -170,6 +181,7 @@ function cardHtml(e, today) {
         ${isToday ? '<span class="badge today-badge">今天</span>' : ''}
       </div>
       <h2 class="title">${escapeHtml(e.title || '（无标题）')}</h2>
+      ${e.tags && e.tags.length ? `<div class="card-tags">${e.tags.map((t) => `<span class="tag-chip" style="background:${escapeHtml(t.color)};color:#fff;">${escapeHtml(t.name)}</span>`).join('')}</div>` : ''}
       ${body}
     </div>
   `;
@@ -187,7 +199,7 @@ function bindEvents() {
         const res = await fetch(`/api/episodes/${date}/checkin`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action }),
+          body: JSON.stringify({ action, user_id: currentUserId }),
         });
         if (res.ok) {
           load();
@@ -205,6 +217,24 @@ function bindEvents() {
   });
 }
 
+async function loadTerms() {
+  const areas = document.querySelectorAll('[data-terms]');
+  for (const el of areas) {
+    const date = el.dataset.terms;
+    try {
+      const res = await fetch(`/api/episodes/${date}/terms`);
+      if (!res.ok) { el.innerHTML = ''; continue; }
+      const items = await res.json();
+      if (!items || !items.length) { el.innerHTML = ''; continue; }
+      el.innerHTML = '<div class="terms-title">📖 高频术语</div><div class="terms-list">' + items.map((t) => `
+        <span class="term-chip">${escapeHtml(t.word)}<span class="term-tooltip">${escapeHtml(t.pinyin || '')}${t.meaning ? '<br>' + escapeHtml(t.meaning) : ''}</span></span>
+      `).join('') + '</div>';
+    } catch {
+      el.innerHTML = '';
+    }
+  }
+}
+
 async function loadVocab() {
   const areas = document.querySelectorAll('[data-vocab]');
   for (const el of areas) {
@@ -218,6 +248,7 @@ async function loadVocab() {
         <div class="vocab-item">
           <span class="vocab-word">${escapeHtml(it.word)}</span>
           <span class="vocab-pos">${escapeHtml(it.pos || '')}</span>
+          ${it.pinyin ? `<span class="vocab-pinyin">${escapeHtml(it.pinyin)}</span>` : ''}
           ${it.sentence ? `<span class="vocab-sentence">${escapeHtml(it.sentence)}</span>` : ''}
         </div>
       `).join('');
@@ -239,4 +270,45 @@ allBtn.addEventListener('click', () => {
   renderList();
 });
 
-load();
+userSelect.addEventListener('change', () => {
+  currentUserId = userSelect.value;
+  load();
+});
+
+// 加载用户列表，默认选第一个
+async function loadUsers() {
+  const res = await fetch('/api/users');
+  const users = await res.json();
+  if (!users.length) {
+    userSelect.style.display = 'none';
+    return;
+  }
+  userSelect.innerHTML = users.map((u) => `<option value="${u.id}">${escapeHtml(u.name)}</option>`).join('');
+  currentUserId = String(users[0].id);
+  userSelect.value = currentUserId;
+  load();
+}
+
+// tag 筛选
+function renderTagFilter() {
+  const tagMap = new Map();
+  for (const e of allEpisodes) {
+    for (const t of e.tags || []) tagMap.set(t.name, t.color);
+  }
+  if (!tagMap.size) {
+    tagFilterEl.innerHTML = '';
+    return;
+  }
+  tagFilterEl.innerHTML = [...tagMap.entries()].map(([name, color]) => `
+    <span class="tag-chip" style="background:${escapeHtml(color)};color:#fff;cursor:pointer;${currentTag === name ? 'box-shadow:0 0 0 2px #333;' : ''}" data-filtertag="${escapeHtml(name)}">${escapeHtml(name)}</span>
+  `).join('');
+  tagFilterEl.querySelectorAll('[data-filtertag]').forEach((chip) => {
+    chip.addEventListener('click', () => {
+      currentTag = currentTag === chip.dataset.filtertag ? null : chip.dataset.filtertag;
+      renderTagFilter();
+      renderList();
+    });
+  });
+}
+
+loadUsers();

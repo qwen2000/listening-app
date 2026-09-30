@@ -1,7 +1,10 @@
 // 路由 /api/episodes/:date/extract
-// POST —— 家长触发词句提取
-//   方式 1：body 带 { text }（粘贴 OCR 出来的文字）直接提取
-//   方式 2：body 为空，从该日期的 PDF 解析文字再提取（仅文字型 PDF）
+// POST —— 家长触发提取
+//   方式 1：body 带 { text }（粘贴 OCR 文字）
+//   方式 2：body 为空，从该日期的 PDF 解析文字
+// 提取：LLM（DeepSeek）为主，词库兜底。产出两类：
+//   - terms（术语+拼音+释义，孩子听之前看，不审核）
+//   - vocab（重点词句，家长审核后孩子看）
 
 import { VOCAB_IDIOMS, VOCAB_NOUNS, VOCAB_VERBS, VOCAB_ADJECTIVES } from '../../../_vocab.js';
 
@@ -26,8 +29,8 @@ function countWords(words, text) {
     .map(([w]) => w);
 }
 
-function buildItems(text, count) {
-  // 成语优先，其余按 4:3:3（名:动:形）分配
+// 词库匹配（兜底，只产词句，不产术语）
+function buildVocabFromWordlist(text, count) {
   const idioms = countWords(VOCAB_IDIOMS, text);
   const idiomCount = Math.min(idioms.length, count);
   const remaining = count - idiomCount;
@@ -46,7 +49,6 @@ function buildItems(text, count) {
     ...adjs.map((w) => ({ word: w, pos: '形容词' })),
   ].slice(0, count);
 
-  // 按句末标点切分完整句子（忽略 OCR 换行，避免句子被切碎）
   const sentences = text
     .replace(/[\r\n]+/g, '')
     .split(/[。！？!?；;]+/)
@@ -55,11 +57,87 @@ function buildItems(text, count) {
 
   return tagged.map(({ word, pos }) => {
     let sentence = sentences.find((s) => s.includes(word)) || '';
-    if (sentence.length > 90) {
-      sentence = sentence.slice(0, 90) + '…';
-    }
-    return { word, pos, sentence };
+    if (sentence.length > 90) sentence = sentence.slice(0, 90) + '…';
+    return { word, pos, pinyin: '', sentence };
   });
+}
+
+// 用原文的完整句子补全 LLM 可能截断的例句
+function fixSentences(vocab, text) {
+  const sentences = text
+    .replace(/[\r\n]+/g, '')
+    .split(/[。！？!?；;]+/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+  return vocab.map((v) => {
+    const full = sentences.find((s) => s.includes(v.word));
+    if (full && full.length > (v.sentence || '').length) {
+      let sentence = full;
+      if (sentence.length > 90) sentence = sentence.slice(0, 90) + '…';
+      return { ...v, sentence };
+    }
+    return v;
+  });
+}
+
+// LLM 提取（DeepSeek）：术语 + 词句
+async function extractWithLLM(text, count, env) {
+  if (!env.DEEPSEEK_API_KEY) return null;
+
+  const prompt = `请分析下面的文本，提取两类内容：
+
+1. terms（高频术语 5-10 个）：文本中反复出现的专业术语、关键概念词，每个配拼音和简要释义（给孩子听之前预习用）。
+2. vocab（重点词语 ${count} 个）：值得学习的成语、书面语，每个配词性、拼音和原文例句（例句必须是原文里完整的一句话，不要截断）。不要包含 terms 里的词。
+
+只返回 JSON（不要任何解释）：
+{"terms":[{"word":"...","pinyin":"...","meaning":"..."}], "vocab":[{"word":"...","pos":"...","pinyin":"...","sentence":"..."}]}
+
+词性只能是：成语、名词、动词、形容词、其他。
+拼音用标准带声调字母（如：là gé lǎng rì diǎn）。
+
+文本：
+${text.slice(0, 8000)}`;
+
+  try {
+    const res = await fetch('https://api.deepseek.com/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${env.DEEPSEEK_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        messages: [
+          { role: 'system', content: '你是资深中文老师，擅长提取专业术语和重点词语，准确标注拼音和释义。' },
+          { role: 'user', content: prompt },
+        ],
+        temperature: 0.3,
+      }),
+    });
+    const data = await res.json();
+    const content = data && data.choices && data.choices[0] && data.choices[0].message ? data.choices[0].message.content : '';
+    if (!content) return null;
+
+    const jsonStr = content.replace(/```json\s*/g, '').replace(/```/g, '').trim();
+    const obj = JSON.parse(jsonStr);
+
+    const terms = (obj.terms || []).map((t) => ({
+      word: (t.word || '').toString().trim(),
+      pinyin: (t.pinyin || '').toString().trim(),
+      meaning: (t.meaning || '').toString().trim(),
+    })).filter((t) => t.word);
+
+    const vocab = (obj.vocab || []).map((v) => ({
+      word: (v.word || '').toString().trim(),
+      pos: (v.pos || '').toString().trim(),
+      pinyin: (v.pinyin || '').toString().trim(),
+      sentence: (v.sentence || '').toString().trim(),
+    })).filter((v) => v.word);
+
+    return { terms, vocab };
+  } catch (e) {
+    return null;
+  }
 }
 
 export async function onRequest(context) {
@@ -73,7 +151,6 @@ export async function onRequest(context) {
     return new Response('Unauthorized', { status: 401 });
   }
 
-  // 尝试解析 body，可能带 { text }
   let body = {};
   try {
     body = await request.json();
@@ -87,7 +164,6 @@ export async function onRequest(context) {
   if (pastedText) {
     text = pastedText;
   } else {
-    // 从 PDF 提取文字
     const ep = await env.DB.prepare('SELECT pdf_key FROM episodes WHERE date = ?').bind(date).first();
     if (!ep || !ep.pdf_key) {
       return Response.json({ error: '该日期还没有 PDF，请先上传' }, { status: 404 });
@@ -117,16 +193,36 @@ export async function onRequest(context) {
     }
   }
 
-  const items = buildItems(text, count);
-  if (!items.length) {
-    return Response.json({ ok: true, count: 0, items: [] });
+  // LLM 为主，词库兜底
+  let terms = [];
+  let vocab = [];
+  let source = 'llm';
+  const llmResult = await extractWithLLM(text, count, env);
+  if (llmResult && (llmResult.terms.length || llmResult.vocab.length)) {
+    terms = llmResult.terms;
+    vocab = fixSentences(llmResult.vocab, text);
+  } else {
+    vocab = buildVocabFromWordlist(text, count);
+    source = 'vocab';
   }
 
-  await env.DB.prepare('DELETE FROM vocab_items WHERE date = ?').bind(date).run();
-  const stmt = env.DB.prepare('INSERT INTO vocab_items (date, word, sentence, pos, approved) VALUES (?, ?, ?, ?, 0)');
-  for (const it of items) {
-    await stmt.bind(date, it.word, it.sentence, it.pos).run();
+  // 存术语
+  if (terms.length) {
+    await env.DB.prepare('DELETE FROM terms WHERE date = ?').bind(date).run();
+    const tstmt = env.DB.prepare('INSERT INTO terms (date, word, pinyin, meaning) VALUES (?, ?, ?, ?)');
+    for (const t of terms) {
+      await tstmt.bind(date, t.word, t.pinyin || '', t.meaning || '').run();
+    }
   }
 
-  return Response.json({ ok: true, count: items.length, items });
+  // 存词句
+  if (vocab.length) {
+    await env.DB.prepare('DELETE FROM vocab_items WHERE date = ?').bind(date).run();
+    const vstmt = env.DB.prepare('INSERT INTO vocab_items (date, word, sentence, pos, pinyin, approved) VALUES (?, ?, ?, ?, ?, 0)');
+    for (const v of vocab) {
+      await vstmt.bind(date, v.word, v.sentence || '', v.pos || '', v.pinyin || '').run();
+    }
+  }
+
+  return Response.json({ ok: true, terms: terms.length, vocab: vocab.length, source });
 }

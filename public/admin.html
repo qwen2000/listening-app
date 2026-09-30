@@ -43,6 +43,15 @@
       </div>
 
       <div class="card">
+        <h2 class="section-title" style="margin-top:0;">用户管理</h2>
+        <div style="display:flex;gap:8px;">
+          <input type="text" id="newUserName" placeholder="用户名字（如：哥哥、弟弟）" style="flex:1;">
+          <button class="btn" id="addUserBtn" style="flex-shrink:0;">添加用户</button>
+        </div>
+        <div id="userList" style="margin-top:8px;"></div>
+      </div>
+
+      <div class="card">
         <h2 class="section-title" style="margin-top:0;">上传音频</h2>
         <div class="field">
           <label>标题（可选）</label>
@@ -51,6 +60,11 @@
         <div class="field">
           <label>音频文件</label>
           <input type="file" id="audioFile" accept="audio/*">
+        </div>
+        <div class="field">
+          <label>标签（可选，逗号分隔）</label>
+          <input type="text" id="audioTags" placeholder="如：科技, 马斯克">
+          <div id="tagSuggestions" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px;"></div>
         </div>
         <button class="btn" id="uploadAudioBtn">上传音频</button>
         <p class="msg" id="audioMsg"></p>

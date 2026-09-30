@@ -10,7 +10,7 @@ export async function onRequest(context) {
   }
 
   const { results } = await env.DB.prepare(
-    'SELECT id, word, sentence, pos, approved FROM vocab_items WHERE date = ? ORDER BY id'
+    'SELECT id, word, sentence, pos, pinyin, approved FROM vocab_items WHERE date = ? ORDER BY id'
   ).bind(date).all();
 
   const pw = request.headers.get('X-Parent-Password') || '';

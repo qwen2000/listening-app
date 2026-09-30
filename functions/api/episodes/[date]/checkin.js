@@ -1,5 +1,5 @@
 // 路由 /api/episodes/:date/checkin
-// POST —— 孩子打卡，body: { action: 'listened' | 'summarized' }，无需密码
+// POST —— 孩子打卡，body: { action: 'listened' | 'summarized', user_id }，无需密码
 
 export async function onRequest(context) {
   const { request, env, params } = context;
@@ -16,24 +16,21 @@ export async function onRequest(context) {
     body = {};
   }
   const action = (body.action || '').toString();
+  const userId = body.user_id;
 
-  const now = new Date().toISOString();
-  let result;
-  if (action === 'listened') {
-    result = await env.DB.prepare(
-      'UPDATE episodes SET listened_at = ? WHERE date = ?'
-    ).bind(now, date).run();
-  } else if (action === 'summarized') {
-    result = await env.DB.prepare(
-      'UPDATE episodes SET summarized_at = ? WHERE date = ?'
-    ).bind(now, date).run();
-  } else {
+  if (!userId) {
+    return new Response('缺少 user_id', { status: 400 });
+  }
+  const field = action === 'listened' ? 'listened_at' : (action === 'summarized' ? 'summarized_at' : '');
+  if (!field) {
     return new Response('未知 action', { status: 400 });
   }
 
-  if (!result.meta.changes) {
-    return new Response('该日期还没有听力', { status: 404 });
-  }
+  const now = new Date().toISOString();
+  await env.DB.prepare(
+    `INSERT INTO checkins (date, user_id, ${field}) VALUES (?, ?, ?)
+     ON CONFLICT(date, user_id) DO UPDATE SET ${field} = excluded.${field}`
+  ).bind(date, userId, now).run();
 
   return Response.json({ ok: true, date, action });
 }
