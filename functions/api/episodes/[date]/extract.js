@@ -7,6 +7,7 @@
 //   - vocab（重点词句，家长审核后孩子看）
 
 import { VOCAB_IDIOMS, VOCAB_NOUNS, VOCAB_VERBS, VOCAB_ADJECTIVES } from '../../../_vocab.js';
+import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 
 function checkPassword(request, env) {
   const pw = request.headers.get('X-Parent-Password') || '';
@@ -175,8 +176,7 @@ export async function onRequest(context) {
     const buf = await obj.arrayBuffer();
 
     try {
-      const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
-      const pdf = await pdfjs.getDocument({
+      const pdf = await getDocument({
         data: new Uint8Array(buf),
         useWorkerFetch: false,
         isEvalSupported: false,
