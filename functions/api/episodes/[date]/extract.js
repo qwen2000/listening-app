@@ -1,7 +1,5 @@
 // 路由 /api/episodes/:date/extract
-// POST —— 家长触发提取
-//   方式 1：body 带 { text }（粘贴 OCR 文字）
-//   方式 2：body 为空，从该日期的 PDF 解析文字
+// POST —— 家长触发提取，body 带 { text }（本地识别后粘贴的文字）
 // 提取：LLM（DeepSeek）为主，词库兜底。产出两类：
 //   - terms（术语+拼音+释义，孩子听之前看，不审核）
 //   - vocab（重点词句，家长审核后孩子看）

@@ -1,4 +1,5 @@
 let password = '';
+let existingMap = {}; // date -> { audio, pdf }，用于覆盖前二次确认
 
 function todayStr() {
   const d = new Date();
@@ -47,6 +48,7 @@ async function unlock() {
     document.getElementById('panel').style.display = 'block';
     document.getElementById('todayLabel').textContent = '已解锁';
     loadList();
+    loadExistingDates();
   } else {
     showMsg('lockMsg', '密码错误', true);
   }
@@ -59,6 +61,9 @@ async function uploadAudio() {
   if (!date || !file) {
     showMsg('audioMsg', '请选择日期和音频文件', true);
     return;
+  }
+  if (existingMap[date] && existingMap[date].audio) {
+    if (!confirm(`日期 ${date} 已有音频，确定覆盖吗？`)) return;
   }
 
   const form = new FormData();
@@ -80,6 +85,7 @@ async function uploadAudio() {
       showMsg('audioMsg', `已上传：${date}`, false);
       document.getElementById('audioFile').value = '';
       loadList();
+      loadExistingDates();
     } else if (res.status === 401) {
       showMsg('audioMsg', '密码错误，请重新解锁', true);
     } else {
@@ -99,6 +105,9 @@ async function uploadPdf() {
     showMsg('pdfMsg', '请选择日期和 PDF 文件', true);
     return;
   }
+  if (existingMap[date] && existingMap[date].pdf) {
+    if (!confirm(`日期 ${date} 已有文本，确定覆盖吗？`)) return;
+  }
 
   const form = new FormData();
   form.append('file', file);
@@ -113,9 +122,10 @@ async function uploadPdf() {
       body: form,
     });
     if (res.ok) {
-      showMsg('pdfMsg', `已上传 PDF：${date}`, false);
+      showMsg('pdfMsg', `已上传文本：${date}`, false);
       document.getElementById('pdfFile').value = '';
       loadList();
+      loadExistingDates();
     } else if (res.status === 401) {
       showMsg('pdfMsg', '密码错误，请重新解锁', true);
     } else {
@@ -517,3 +527,13 @@ document.getElementById('audioFile').addEventListener('change', (e) => {
     titleEl.value = file.name.replace(/\.[^.]+$/, '');
   }
 });
+
+// 加载已有记录（用于上传前覆盖确认）
+async function loadExistingDates() {
+  const res = await fetch('/api/episodes');
+  const eps = await res.json();
+  existingMap = {};
+  for (const e of eps) {
+    existingMap[e.date] = { audio: !!e.audioUrl, pdf: !!e.pdfUrl };
+  }
+}

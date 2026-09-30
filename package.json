@@ -7,9 +7,7 @@
     "dev": "wrangler pages dev public",
     "deploy": "wrangler pages deploy public"
   },
-  "dependencies": {
-    "unpdf": "^1.8.1"
-  },
+  "dependencies": {},
   "devDependencies": {
     "wrangler": "^3.78.0"
   }
