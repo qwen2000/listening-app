@@ -403,6 +403,7 @@ async function extractFromText() {
     if (res.ok) {
       showMsg('extractMsg', `提取到 ${data.count} 个词语，请在下面审核`, false);
       loadVocabList(date);
+      loadPreview();
     } else if (res.status === 401) {
       showMsg('extractMsg', '密码错误', true);
     } else {
@@ -647,4 +648,32 @@ async function loadDateStatus() {
   parts.push(s.hasHints ? '✅ 已生成提示词' : '❌ 未生成提示词');
   parts.push(s.hasVocab ? '✅ 已提取词句' : '❌ 未提取词句');
   el.innerHTML = parts.join('<br>');
+  loadPreview();
+}
+
+// 预览该日期的术语和概述提示词
+async function loadPreview() {
+  const date = document.getElementById('date').value;
+  const el = document.getElementById('previewArea');
+  if (!date) {
+    el.innerHTML = '';
+    return;
+  }
+  const [termsRes, hintsRes] = await Promise.all([
+    fetch(`/api/episodes/${date}/terms`),
+    fetch(`/api/episodes/${date}/summary-hints`),
+  ]);
+  const terms = await termsRes.json();
+  const hints = await hintsRes.json();
+  let html = '';
+  if (terms.length) {
+    html += '<div class="terms-title">📖 高频术语</div><div class="terms-list">' + terms.map((t) => `<span class="term-chip">${escapeHtml(t.word)}</span>`).join('') + '</div>';
+  }
+  if (hints.length) {
+    html += '<div class="hints-title">✍️ 概述提示词</div><div class="terms-list">' + hints.map((h) => `<span class="term-chip">${escapeHtml(h)}</span>`).join('') + '</div>';
+  }
+  if (!html) {
+    html = '<p class="muted">还没有提取内容</p>';
+  }
+  el.innerHTML = html;
 }
