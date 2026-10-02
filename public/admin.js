@@ -263,6 +263,8 @@ document.getElementById('password').addEventListener('keydown', (e) => {
 // 默认日期填今天
 document.getElementById('date').value = todayStr();
 document.getElementById('todayLabel').textContent = `今天是 ${formatDate(todayStr())}`;
+document.getElementById('date').addEventListener('change', loadDateStatus);
+loadDateStatus();
 
 // ===== 用户管理 =====
 document.getElementById('addUserBtn').addEventListener('click', addUser);
@@ -619,4 +621,30 @@ async function loadExistingDates() {
   for (const e of eps) {
     existingMap[e.date] = { audio: !!e.audioUrl, pdf: !!e.pdfUrl };
   }
+}
+
+// 显示所选日期的状态（标题、是否有文档/提示词/词句）
+async function loadDateStatus() {
+  const date = document.getElementById('date').value;
+  const el = document.getElementById('dateStatus');
+  if (!date) {
+    el.innerHTML = '';
+    return;
+  }
+  const res = await fetch(`/api/episodes/${date}/status`);
+  if (!res.ok) {
+    el.innerHTML = '';
+    return;
+  }
+  const s = await res.json();
+  if (!s.hasAudio && !s.hasPdf && !s.hasHints && !s.hasVocab) {
+    el.innerHTML = '<span class="muted">这个日期还没有内容</span>';
+    return;
+  }
+  const parts = [];
+  if (s.hasAudio) parts.push(`🎵 音频：${escapeHtml(s.title || '（无标题）')}`);
+  parts.push(s.hasPdf ? '✅ 已有文档' : '❌ 无文档');
+  parts.push(s.hasHints ? '✅ 已生成提示词' : '❌ 未生成提示词');
+  parts.push(s.hasVocab ? '✅ 已提取词句' : '❌ 未提取词句');
+  el.innerHTML = parts.join('<br>');
 }
