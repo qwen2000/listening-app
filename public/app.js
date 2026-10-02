@@ -159,7 +159,7 @@ function cardHtml(e, today) {
   } else if (e.audioUrl) {
     body = `
       <div class="terms-area" data-terms="${e.date}"></div>
-      <div class="summary-hints-area" data-hints="${e.date}"></div>
+      ${listened ? `<div class="summary-hints-area" data-hints="${e.date}"></div>` : ''}
       <audio controls preload="none" src="${escapeHtml(e.audioUrl)}"></audio>
       <div class="checkin-row">
         ${listened
