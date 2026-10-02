@@ -257,7 +257,12 @@ audio { width: 100%; margin-bottom: 12px; }
 }
 .term-chip:hover .term-tooltip { display: block; }
 .card-tags { margin: 4px 0 8px; }
-.summary-hints-area { margin: 10px 0; }
+.summary-hints-area {
+  background: #fdf6ec;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}
 .hints-title { font-size: 13px; font-weight: bold; color: #8a6d1a; margin-bottom: 6px; }
 .vocab-pinyin { font-size: 13px; color: #888; margin-left: 4px; }
 .vocab-pos {

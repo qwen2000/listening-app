@@ -159,6 +159,7 @@ function cardHtml(e, today) {
   } else if (e.audioUrl) {
     body = `
       <div class="terms-area" data-terms="${e.date}"></div>
+      <div class="summary-hints-area" data-hints="${e.date}"></div>
       <audio controls preload="none" src="${escapeHtml(e.audioUrl)}"></audio>
       <div class="checkin-row">
         ${listened
@@ -168,7 +169,6 @@ function cardHtml(e, today) {
           ? '<span class="badge checked-badge">✅ 已概述</span>'
           : `<button class="btn" data-action="summarized" data-date="${e.date}" ${listened ? '' : 'disabled'}>② 已概述</button>`}
       </div>
-      ${listened && !summarized ? `<div class="summary-hints-area" data-hints="${e.date}"></div>` : ''}
       ${pdfArea(e, listened, summarized, reviewed)}
       ${listened && summarized && reviewed && e.pdfUrl ? `<div class="vocab-area" data-vocab="${e.date}"></div>` : ''}
     `;
