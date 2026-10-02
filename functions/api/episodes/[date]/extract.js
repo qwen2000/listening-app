@@ -82,13 +82,14 @@ function fixSentences(vocab, text) {
 async function extractWithLLM(text, count, env) {
   if (!env.DEEPSEEK_API_KEY) return null;
 
-  const prompt = `请分析下面的文本，提取两类内容：
+  const prompt = `请分析下面的文本，提取三类内容：
 
 1. terms（高频术语 5-10 个）：文本中反复出现的专业术语、关键概念词，每个配拼音和简要释义（给孩子听之前预习用）。
-2. vocab（重点词语 ${count} 个）：值得学习的成语、书面语，每个配词性、拼音和原文例句（例句必须是原文里完整的一句话，不要截断）。不要包含 terms 里的词。
+2. summary_hints（概述提示词 6-10 个）：写这篇内容的概述时，应该用到的关键词/短语（帮助孩子练习概述和写作，只返回词本身）。
+3. vocab（重点词语 ${count} 个）：值得学习的成语、书面语，每个配词性、拼音和原文例句（例句必须是原文里完整的一句话，不要截断）。不要包含 terms 和 summary_hints 里的词。
 
 只返回 JSON（不要任何解释）：
-{"terms":[{"word":"...","pinyin":"...","meaning":"..."}], "vocab":[{"word":"...","pos":"...","pinyin":"...","sentence":"..."}]}
+{"terms":[{"word":"...","pinyin":"...","meaning":"..."}], "summary_hints":["词1","词2"], "vocab":[{"word":"...","pos":"...","pinyin":"...","sentence":"..."}]}
 
 词性只能是：成语、名词、动词、形容词、其他。
 拼音用标准带声调字母（如：là gé lǎng rì diǎn）。
@@ -132,7 +133,9 @@ ${text.slice(0, 8000)}`;
       sentence: (v.sentence || '').toString().trim(),
     })).filter((v) => v.word);
 
-    return { terms, vocab };
+    const summaryHints = (obj.summary_hints || []).map((h) => (typeof h === 'string' ? h : (h && h.word) || '')).map((h) => h.toString().trim()).filter(Boolean);
+
+    return { terms, summaryHints, vocab };
   } catch (e) {
     return null;
   }
@@ -168,11 +171,13 @@ export async function onRequest(context) {
 
   // LLM 为主，词库兜底
   let terms = [];
+  let summaryHints = [];
   let vocab = [];
   let source = 'llm';
   const llmResult = await extractWithLLM(text, count, env);
   if (llmResult && (llmResult.terms.length || llmResult.vocab.length)) {
     terms = llmResult.terms;
+    summaryHints = llmResult.summaryHints || [];
     vocab = fixSentences(llmResult.vocab, text);
   } else {
     vocab = buildVocabFromWordlist(text, count);
@@ -188,6 +193,15 @@ export async function onRequest(context) {
     }
   }
 
+  // 存概述提示词
+  if (summaryHints.length) {
+    await env.DB.prepare('DELETE FROM summary_hints WHERE date = ?').bind(date).run();
+    const hstmt = env.DB.prepare('INSERT INTO summary_hints (date, word) VALUES (?, ?)');
+    for (const h of summaryHints) {
+      await hstmt.bind(date, h).run();
+    }
+  }
+
   // 存词句
   if (vocab.length) {
     await env.DB.prepare('DELETE FROM vocab_items WHERE date = ?').bind(date).run();
@@ -197,5 +211,5 @@ export async function onRequest(context) {
     }
   }
 
-  return Response.json({ ok: true, terms: terms.length, vocab: vocab.length, source });
+  return Response.json({ ok: true, terms: terms.length, summaryHints: summaryHints.length, vocab: vocab.length, source });
 }

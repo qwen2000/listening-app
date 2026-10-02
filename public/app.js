@@ -127,6 +127,7 @@ function renderList() {
   listEl.innerHTML = html;
   bindEvents();
   loadTerms();
+  loadSummaryHints();
   loadVocab();
 }
 
@@ -167,6 +168,7 @@ function cardHtml(e, today) {
           ? '<span class="badge checked-badge">✅ 已概述</span>'
           : `<button class="btn" data-action="summarized" data-date="${e.date}" ${listened ? '' : 'disabled'}>② 已概述</button>`}
       </div>
+      ${listened && !summarized ? `<div class="summary-hints-area" data-hints="${e.date}"></div>` : ''}
       ${pdfArea(e, listened, summarized, reviewed)}
       ${listened && summarized && reviewed && e.pdfUrl ? `<div class="vocab-area" data-vocab="${e.date}"></div>` : ''}
     `;
@@ -229,6 +231,22 @@ async function loadTerms() {
       el.innerHTML = '<div class="terms-title">📖 高频术语</div><div class="terms-list">' + items.map((t) => `
         <span class="term-chip">${escapeHtml(t.word)}<span class="term-tooltip">${escapeHtml(t.pinyin || '')}${t.meaning ? '<br>' + escapeHtml(t.meaning) : ''}</span></span>
       `).join('') + '</div>';
+    } catch {
+      el.innerHTML = '';
+    }
+  }
+}
+
+async function loadSummaryHints() {
+  const areas = document.querySelectorAll('[data-hints]');
+  for (const el of areas) {
+    const date = el.dataset.hints;
+    try {
+      const res = await fetch(`/api/episodes/${date}/summary-hints`);
+      if (!res.ok) { el.innerHTML = ''; continue; }
+      const words = await res.json();
+      if (!words || !words.length) { el.innerHTML = ''; continue; }
+      el.innerHTML = '<div class="hints-title">✍️ 概述可参考这些词</div><div class="terms-list">' + words.map((w) => `<span class="term-chip">${escapeHtml(w)}</span>`).join('') + '</div>';
     } catch {
       el.innerHTML = '';
     }

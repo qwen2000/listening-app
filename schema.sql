@@ -2,6 +2,7 @@
 DROP TABLE IF EXISTS episodes;
 DROP TABLE IF EXISTS vocab_items;
 DROP TABLE IF EXISTS terms;
+DROP TABLE IF EXISTS summary_hints;
 DROP TABLE IF EXISTS checkins;
 DROP TABLE IF EXISTS users;
 DROP TABLE IF EXISTS tags;
@@ -55,6 +56,14 @@ CREATE TABLE terms (
   word TEXT NOT NULL,
   pinyin TEXT,
   meaning TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- 概述提示词（LLM 提取，孩子「已听」后看，用于提示写概述）
+CREATE TABLE summary_hints (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  date TEXT NOT NULL,
+  word TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
