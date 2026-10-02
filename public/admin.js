@@ -1,5 +1,6 @@
 let password = '';
 let existingMap = {}; // date -> { audio, pdf }，用于覆盖前二次确认
+let currentWeekKey = null; // 检查打卡当前选中的周
 
 function todayStr() {
   const d = new Date();
@@ -7,6 +8,24 @@ function todayStr() {
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
+}
+
+// 计算某日期所在周的周一（YYYY-MM-DD）
+function getWeekKey(dateStr) {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const dt = new Date(y, m - 1, d);
+  const diff = (dt.getDay() + 6) % 7;
+  const monday = new Date(y, m - 1, d - diff);
+  const mm = String(monday.getMonth() + 1).padStart(2, '0');
+  const dd = String(monday.getDate()).padStart(2, '0');
+  return `${monday.getFullYear()}-${mm}-${dd}`;
+}
+
+// 周一日期 -> "9/28-10/4"
+function formatWeekRange(mondayStr) {
+  const [y, m, d] = mondayStr.split('-').map(Number);
+  const sunday = new Date(y, m - 1, d + 6);
+  return `${m}/${d}-${sunday.getMonth() + 1}/${sunday.getDate()}`;
 }
 
 function formatDate(dateStr) {
@@ -140,13 +159,30 @@ async function uploadPdf() {
 
 async function loadList() {
   const res = await fetch('/api/review');
-  const eps = await res.json();
+  const allEps = await res.json();
   const el = document.getElementById('reviewList');
 
-  if (!eps.length) {
+  if (!allEps.length) {
     el.innerHTML = '<p class="muted">还没有任何听力</p>';
+    document.getElementById('weekSelect').innerHTML = '';
     return;
   }
+
+  // 按周分组，填充周下拉，默认当前周
+  const weeks = new Map();
+  for (const e of allEps) {
+    const key = getWeekKey(e.date);
+    if (!weeks.has(key)) weeks.set(key, []);
+    weeks.get(key).push(e);
+  }
+  const thisWeekKey = getWeekKey(todayStr());
+  if (!currentWeekKey || !weeks.has(currentWeekKey)) {
+    currentWeekKey = thisWeekKey;
+  }
+  const sortedWeeks = [...weeks.keys()].sort((a, b) => b.localeCompare(a));
+  document.getElementById('weekSelect').innerHTML = sortedWeeks.map((key) => `<option value="${key}" ${key === currentWeekKey ? 'selected' : ''}>${formatWeekRange(key)}</option>`).join('');
+
+  const eps = currentWeekKey && weeks.has(currentWeekKey) ? weeks.get(currentWeekKey) : allEps;
 
   el.innerHTML = eps.map((e) => {
     const userRows = (e.users || []).map((u) => {
@@ -264,6 +300,10 @@ document.getElementById('password').addEventListener('keydown', (e) => {
 document.getElementById('date').value = todayStr();
 document.getElementById('todayLabel').textContent = `今天是 ${formatDate(todayStr())}`;
 document.getElementById('date').addEventListener('change', loadDateStatus);
+document.getElementById('weekSelect').addEventListener('change', (e) => {
+  currentWeekKey = e.target.value;
+  loadList();
+});
 loadDateStatus();
 
 // ===== 用户管理 =====
