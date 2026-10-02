@@ -202,9 +202,9 @@ export async function onRequest(context) {
     }
   }
 
-  // 存词句
-  if (vocab.length) {
-    await env.DB.prepare('DELETE FROM vocab_items WHERE date = ?').bind(date).run();
+  // 存词句：该日期已有词句则保留（避免覆盖已审核的），否则插入新的
+  const existingVocab = await env.DB.prepare('SELECT COUNT(*) as c FROM vocab_items WHERE date = ?').bind(date).first();
+  if ((!existingVocab || existingVocab.c === 0) && vocab.length) {
     const vstmt = env.DB.prepare('INSERT INTO vocab_items (date, word, sentence, pos, pinyin, approved) VALUES (?, ?, ?, ?, ?, 0)');
     for (const v of vocab) {
       await vstmt.bind(date, v.word, v.sentence || '', v.pos || '', v.pinyin || '').run();
