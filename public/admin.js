@@ -196,11 +196,15 @@ async function loadList() {
       } else {
         status = '<span class="muted">未完成</span>';
       }
+      const cancelBtns = [];
+      if (u.listened) cancelBtns.push(`<button class="btn secondary" data-unlisten="${e.date}" data-user="${u.id}">取消已听</button>`);
+      if (u.summarized) cancelBtns.push(`<button class="btn secondary" data-unsummarize="${e.date}" data-user="${u.id}">取消已概述</button>`);
       return `
         <div class="user-row">
           <span class="user-name">${escapeHtml(u.name)}</span>
           <span class="user-status">${listened} ${summarized}</span>
           ${status}
+          ${cancelBtns.join('')}
         </div>
       `;
     }).join('');
@@ -226,6 +230,28 @@ async function loadList() {
   document.querySelectorAll('[data-edit-audio]').forEach((btn) => {
     btn.addEventListener('click', () => enterEditAudioMode(btn.dataset.editAudio));
   });
+  document.querySelectorAll('[data-unlisten]').forEach((btn) => {
+    btn.addEventListener('click', () => cancelCheckin(btn.dataset.unlisten, btn.dataset.user, 'unlisten'));
+  });
+  document.querySelectorAll('[data-unsummarize]').forEach((btn) => {
+    btn.addEventListener('click', () => cancelCheckin(btn.dataset.unsummarize, btn.dataset.user, 'unsummarize'));
+  });
+}
+
+async function cancelCheckin(date, userId, action) {
+  if (!confirm('确定取消吗？')) return;
+  const res = await fetch(`/api/episodes/${date}/checkin`, {
+    method: 'POST',
+    headers: authHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ action, user_id: userId }),
+  });
+  if (res.ok) {
+    loadList();
+  } else if (res.status === 401) {
+    alert('密码错误');
+  } else {
+    alert('操作失败');
+  }
 }
 
 function enterEditAudioMode(date) {
