@@ -164,7 +164,6 @@ function cardHtml(e, today) {
         ${summarized
           ? '<span class="badge checked-badge">✅ 已概述</span>'
           : `<button class="btn" data-action="summarized" data-date="${e.date}" ${listened ? '' : 'disabled'}>② 已概述</button>`}
-        ${reviewed ? '<span class="badge checked-badge">✅ 已签字</span>' : '<span class="badge pending-badge">⬜ 已签字</span>'}
       </div>
       ${pdfArea(e, summarized)}
       ${summarized && e.pdfUrl ? `<div class="vocab-area" data-vocab="${e.date}"></div>` : ''}
@@ -177,7 +176,10 @@ function cardHtml(e, today) {
     <div class="${cls}">
       <div class="card-head">
         <span class="date">${formatDate(e.date)}</span>
-        ${isToday ? '<span class="badge today-badge">今天</span>' : ''}
+        <div style="display:flex;gap:6px;align-items:center;">
+          ${isToday ? '<span class="badge today-badge">今天</span>' : ''}
+          ${reviewed ? '<span class="badge checked-badge">✅ 已签字</span>' : '<span class="badge pending-badge">⬜ 已签字</span>'}
+        </div>
       </div>
       <h2 class="title">${escapeHtml(e.title || '（无标题）')}</h2>
       ${e.tags && e.tags.length ? `<div class="card-tags">${e.tags.map((t) => `<span class="tag-chip" style="background:${escapeHtml(t.color)};color:#fff;">${escapeHtml(t.name)}</span>`).join('')}</div>` : ''}
