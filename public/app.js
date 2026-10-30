@@ -131,18 +131,14 @@ function renderList() {
   loadVocab();
 }
 
-function pdfArea(e, listened, summarized, reviewed) {
+function pdfArea(e, summarized) {
   if (!e.pdfUrl) return '';
   const isImage = /\.(jpe?g|png|webp|gif)$/i.test(e.pdfUrl);
-  if (listened && summarized && reviewed) {
+  if (summarized) {
     const label = isImage ? '🖼️ 查看文本图片' : '📄 查看文本';
     return `<a class="pdf-link" href="${escapeHtml(e.pdfUrl)}" target="_blank" rel="noopener">${label}</a>`;
   }
-  const steps = [];
-  if (!listened) steps.push('已听');
-  if (!summarized) steps.push('已概述');
-  if (!reviewed) steps.push('家长签字');
-  return `<p class="muted">完成 ${steps.join('、')} 后即可看文本</p>`;
+  return '<p class="muted">完成「已概述」后即可看文本</p>';
 }
 
 function cardHtml(e, today) {
@@ -168,9 +164,10 @@ function cardHtml(e, today) {
         ${summarized
           ? '<span class="badge checked-badge">✅ 已概述</span>'
           : `<button class="btn" data-action="summarized" data-date="${e.date}" ${listened ? '' : 'disabled'}>② 已概述</button>`}
+        ${reviewed ? '<span class="badge checked-badge">✅ 已签字</span>' : ''}
       </div>
-      ${pdfArea(e, listened, summarized, reviewed)}
-      ${listened && summarized && reviewed && e.pdfUrl ? `<div class="vocab-area" data-vocab="${e.date}"></div>` : ''}
+      ${pdfArea(e, summarized)}
+      ${summarized && e.pdfUrl ? `<div class="vocab-area" data-vocab="${e.date}"></div>` : ''}
     `;
   } else {
     body = '<p class="muted">音频还没上传</p>';
