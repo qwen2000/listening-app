@@ -164,7 +164,7 @@ function cardHtml(e, today) {
         ${summarized
           ? '<span class="badge checked-badge">✅ 已概述</span>'
           : `<button class="btn" data-action="summarized" data-date="${e.date}" ${listened ? '' : 'disabled'}>② 已概述</button>`}
-        ${reviewed ? '<span class="badge checked-badge">✅ 已签字</span>' : ''}
+        ${reviewed ? '<span class="badge checked-badge">✅ 已签字</span>' : '<span class="badge pending-badge">⬜ 已签字</span>'}
       </div>
       ${pdfArea(e, summarized)}
       ${summarized && e.pdfUrl ? `<div class="vocab-area" data-vocab="${e.date}"></div>` : ''}

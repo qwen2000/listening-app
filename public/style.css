@@ -139,6 +139,7 @@ main { max-width: 640px; margin: 0 auto; padding: 16px; }
 .today-badge { background: var(--primary); color: #fff; }
 .checked-badge { background: #e6f6ec; color: var(--success); }
 .reviewed-badge { background: #eef2f7; color: var(--muted); }
+.pending-badge { background: #f2f3f5; color: #a0a5ad; }
 
 audio { width: 100%; margin-bottom: 12px; }
 
