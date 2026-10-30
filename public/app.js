@@ -178,7 +178,7 @@ function cardHtml(e, today) {
         <span class="date">${formatDate(e.date)}</span>
         <div style="display:flex;gap:6px;align-items:center;">
           ${isToday ? '<span class="badge today-badge">今天</span>' : ''}
-          ${reviewed ? '<span class="badge checked-badge">✅ 已签字</span>' : '<span class="badge pending-badge">⬜ 已签字</span>'}
+          ${reviewed ? '<span class="badge checked-badge">✅ 已签字</span>' : '<span class="badge pending-badge">未签字</span>'}
         </div>
       </div>
       <h2 class="title">${escapeHtml(e.title || '（无标题）')}</h2>
